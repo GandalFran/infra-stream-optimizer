@@ -1,0 +1,43 @@
+{{- if and .Values.rolloutManager .Values.rolloutManager.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rollout-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rollout-manager
+  template:
+    metadata:
+      labels:
+        app: rollout-manager
+    spec:
+      serviceAccountName: tuner
+      containers:
+      - name: rollout-manager
+        image: {{ .Values.rolloutManager.image }}
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: GATE_URL
+          value: "http://constraint-gate:8000"
+        - name: CANARY_URL
+          value: "http://canary-deployer:8000"
+        - name: PRODUCTION_NAMESPACE
+          value: {{ .Values.tuner.namespace | default .Release.Namespace | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollout-manager
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: rollout-manager
+{{- end }}

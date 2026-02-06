@@ -1,0 +1,18 @@
+duration_sec: 780
+slos:
+  latency_p95_ms: 5000
+  recovery_time_sec: 60
+
+rate_control:
+  mode: step
+  step_at_sec: 20
+  initial_rate_events_per_sec: 5000 # ~120k ev/min
+
+perturbations:
+  out_of_order:
+    enabled: true
+    probability: 0.05
+    max_jitter_ms: 5000
+
+kafka:
+  topic: trips_in

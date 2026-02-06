@@ -1,0 +1,21 @@
+scenario_id: S0_fast_test
+dataset_id: tlc_yellow_2024_01
+duration_sec: 120
+slos:
+  latency_p95_ms: 3000
+
+rate_control:
+  mode: rate_driven
+  target_rate_events_per_sec: 500  # Lower rate for fast testing
+
+perturbations:
+  out_of_order:
+    enabled: false
+  duplicates:
+    enabled: false
+  key_skew:
+    enabled: false
+
+kafka:
+  topic: trips_in
+  sinks: [trips_stats]

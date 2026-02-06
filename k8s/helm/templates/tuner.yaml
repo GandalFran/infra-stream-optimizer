@@ -1,0 +1,56 @@
+{{- if .Values.tuner.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tuner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tuner
+  template:
+    metadata:
+      labels:
+        app: tuner
+    spec:
+      serviceAccountName: tuner
+      containers:
+      - name: tuner
+        image: {{ .Values.tuner.image }}
+        imagePullPolicy: Never
+        env:
+        - name: PROMETHEUS_URL
+          value: http://prometheus:9090
+        - name: FLINK_JOBMANAGER_URL
+          value: http://flink-jobmanager:8081
+        - name: NAMESPACE
+          value: {{ .Values.tuner.namespace | default .Release.Namespace | quote }}
+        - name: EXP_SEED_OPT
+          value: "{{ .Values.tuner.seed | default 2345 }}"
+        - name: SCENARIO_PATH
+          value: "/app/configs/active/current_scenario.yaml"
+        - name: ROLLOUT_MANAGER_URL
+          value: {{ .Values.tuner.rolloutManagerUrl | default "http://rollout-manager:8000" | quote }}
+{{- if .Values.tuner.baselineMode }}
+        - name: BASELINE_MODE
+          value: "true"
+{{- end }}
+        volumeMounts:
+        - name: scenario-volume
+          mountPath: /app/configs/active
+      volumes:
+      - name: scenario-volume
+        configMap:
+          name: scenario-config
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tuner
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: tuner

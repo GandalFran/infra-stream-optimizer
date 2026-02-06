@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Java/Flink
+target/
+*.class
+*.jar
+
+# IDEs
+.vscode/
+.idea/
+
+# Experiments
+# artifacts/ (Tracked)
+!artifacts/
+*.log
+*.json
+*.jsonl
+!artifacts/**/*.json
+!artifacts/**/*.jsonl
+!data/prepared/*.jsonl
+
+# OS
+.DS_Store
+Thumbs.db

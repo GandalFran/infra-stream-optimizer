@@ -1,0 +1,36 @@
+{{- if and .Values.constraintGate .Values.constraintGate.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: constraint-gate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: constraint-gate
+  template:
+    metadata:
+      labels:
+        app: constraint-gate
+    spec:
+      containers:
+      - name: constraint-gate
+        image: {{ .Values.constraintGate.image }}
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: constraint-gate
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: constraint-gate
+{{- end }}

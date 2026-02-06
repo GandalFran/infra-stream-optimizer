@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+spec:
+  replicas: {{ .Values.flink.taskmanager.replicas }}
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: {{ .Values.flink.image }}
+        imagePullPolicy: Never
+        args: ["taskmanager"]
+        ports:
+        - containerPort: 6122
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: flink-jobmanager
+        - name: TASK_MANAGER_NUMBER_OF_TASK_SLOTS
+          value: "1"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: FLINK_PROPERTIES
+          value: |
+            metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+            metrics.reporter.prom.port: 9249

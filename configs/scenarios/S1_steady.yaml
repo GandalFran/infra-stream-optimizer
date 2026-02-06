@@ -1,0 +1,23 @@
+scenario_id: S1_steady
+dataset_id: tlc_yellow_2024_01
+duration_sec: 780
+slos:
+  latency_p95_ms: 3000
+
+rate_control:
+  mode: rate_driven
+  target_rate_events_per_sec: 1500  # ~90k ev/min
+
+perturbations:
+  out_of_order:
+    enabled: true
+    probability: 0.01
+    max_jitter_ms: 1000
+  duplicates:
+    enabled: false
+  key_skew:
+    enabled: false
+
+kafka:
+  topic: trips_in
+  sinks: [trips_stats]

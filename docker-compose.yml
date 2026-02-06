@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9308:9308"
+    command: [ "--kafka.server=kafka:29092" ]
+
+  jobmanager:
+    build: services/streaming-job
+    ports:
+      - "8081:8081"
+      - "9249:9249"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
+
+  taskmanager:
+    build: services/streaming-job
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
+
+  workload-generator:
+    build:
+      context: .
+      dockerfile: services/workload-generator/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./data/prepared:/app/data
+      - ./artifacts:/app/artifacts
+      - ./configs:/app/configs
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: trips_in
+      TARGET_RATE: ${TARGET_RATE:-50.0}
+      DATA_FILE: /app/data/prepared_shard_00.jsonl
+
+  constraint-gate:
+    build:
+      context: .
+      dockerfile: services/constraint-gate/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./configs:/app/configs
+
+  tuner:
+    build:
+      context: .
+      dockerfile: services/tuner-controller/Dockerfile
+    depends_on:
+      - constraint-gate
+      - prometheus
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./configs:/app/configs
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      ROLLOUT_MANAGER_URL: http://rollout-manager:8000
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  canary-deployer:
+    build:
+      context: .
+      dockerfile: services/canary-deployer/Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./k8s:/app/k8s
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  rollout-manager:
+    build:
+      context: .
+      dockerfile: services/rollout-manager/Dockerfile
+    ports:
+      - "8002:8000"
+    depends_on:
+      - constraint-gate
+      - canary-deployer
+    environment:
+      GATE_URL: http://constraint-gate:8000
+      CANARY_URL: http://canary-deployer:8000
+      PRODUCTION_NAMESPACE: default

@@ -1,0 +1,36 @@
+kafka:
+  image: confluentinc/cp-kafka:7.0.1
+  replicas: 1
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+
+flink:
+  image: flink:1.17.0-java11
+  jobmanager:
+    replicas: 1
+  taskmanager:
+    replicas: 2
+    slots: 1
+
+workloadGenerator:
+  image: workload-generator:latest
+  targetRate: 50.0
+
+tuner:
+  image: tuner-controller:latest
+  enabled: true
+
+canaryDeployer:
+  image: canary-deployer:latest
+  enabled: true
+  productionNamespace: "default"
+
+constraintGate:
+  image: constraint-gate:latest
+  enabled: true
+
+rolloutManager:
+  image: rollout-manager:latest
+  enabled: true

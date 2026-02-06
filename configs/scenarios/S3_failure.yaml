@@ -1,0 +1,15 @@
+duration_sec: 780
+slos:
+  latency_p95_ms: 10000
+
+rate_control:
+  mode: rate_driven
+  target_rate_events_per_sec: 1500
+
+fault_injection:
+  type: kill_pod
+  target: taskmanager
+  at_sec: 20
+
+kafka:
+  topic: trips_in

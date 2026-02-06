@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'flink'
+    static_configs:
+      - targets: ['jobmanager:9249', 'taskmanager:9249']
+        labels:
+          group: 'flink'
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+
+
+  - job_name: 'tuner'
+    static_configs:
+      - targets: ['tuner:8000'] # Assuming tuner exposes metrics if instrumented later
+      
+  - job_name: 'gate'
+    static_configs:
+      - targets: ['constraint-gate:8000']

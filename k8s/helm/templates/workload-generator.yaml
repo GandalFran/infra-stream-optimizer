@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workload-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workload-generator
+  template:
+    metadata:
+      labels:
+        app: workload-generator
+    spec:
+      containers:
+      - name: workload-generator
+        image: {{ .Values.workloadGenerator.image }}
+        imagePullPolicy: Never
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: KAFKA_TOPIC
+          value: trips_in
+        - name: TARGET_RATE
+          value: "{{ .Values.workloadGenerator.targetRate }}"
+        - name: WORKLOAD_GENERATOR_CONFIG
+          value: /app/configs/current_scenario.yaml
+        - name: EXP_SEED_GEN
+          value: "{{ .Values.workloadGenerator.seed | default 1234 }}"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/configs
+      volumes:
+      - name: config-volume
+        configMap:
+          name: scenario-config
